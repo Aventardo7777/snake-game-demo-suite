@@ -1,0 +1,176 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Jul  5 13:47:19 2026
+
+@author: avent
+"""
+import pygame
+import random
+import sys
+import math
+
+# 初始化Pygame
+pygame.init()
+
+# -------------------------- 游戏基础配置（可自行修改） --------------------------
+WIDTH, HEIGHT = 800, 600  # 窗口大小
+FPS = 60  # 帧率
+CELL_SIZE = 20  # 蛇/食物格子大小
+SPEED = 8  # 初始速度
+
+# 配色方案（高级感配色，告别土味）
+BG_COLOR = (15, 15, 35)        # 深色背景
+SNAKE_COLOR = (0, 200, 255)    # 主蛇颜色（亮蓝）
+SNAKE_HEAD_COLOR = (255, 100, 0)# 蛇头颜色（橙色）
+FOOD_COLOR = (255, 0, 100)     # 食物颜色（玫红）
+TEXT_COLOR = (255, 255, 255)   # 文字颜色（纯白）
+BUTTON_COLOR = (50, 50, 100)  # 按钮颜色
+BORDER_COLOR = (100, 100, 180)# 边框颜色
+
+# 创建窗口
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("🎮 贪吃蛇小游戏 - 期末作业")
+clock = pygame.time.Clock()
+
+# 字体设置（清晰美观）
+font_large = pygame.font.SysFont("SimHei", 60, bold=True)
+font_medium = pygame.font.SysFont("SimHei", 40)
+font_small = pygame.font.SysFont("SimHei", 25)
+
+# -------------------------- 工具函数 --------------------------
+# 绘制圆角矩形（让界面更精美）
+def draw_rounded_rect(surface, color, rect, radius):
+    x, y, w, h = rect
+    pygame.draw.rect(surface, color, (x + radius, y, w - 2*radius, h))
+    pygame.draw.rect(surface, color, (x, y + radius, w, h - 2*radius))
+    pygame.draw.circle(surface, color, (x + radius, y + radius), radius)
+    pygame.draw.circle(surface, color, (x + w - radius, y + radius), radius)
+    pygame.draw.circle(surface, color, (x + radius, y + h - radius), radius)
+    pygame.draw.circle(surface, color, (x + w - radius, y + h - radius), radius)
+
+# 生成随机食物（不生成在蛇身上）
+def generate_food(snake_body):
+    while True:
+        food_x = random.randint(0, (WIDTH - CELL_SIZE) // CELL_SIZE) * CELL_SIZE
+        food_y = random.randint(0, (HEIGHT - CELL_SIZE) // CELL_SIZE) * CELL_SIZE
+        food_pos = (food_x, food_y)
+        if food_pos not in snake_body:
+            return food_pos
+
+# 显示文字
+def draw_text(text, font, color, x, y):
+    text_surface = font.render(text, True, color)
+    text_rect = text_surface.get_rect(center=(x, y))
+    screen.blit(text_surface, text_rect)
+
+# -------------------------- 游戏核心类 --------------------------
+class SnakeGame:
+    def __init__(self):
+        self.reset_game()
+
+    # 重置游戏数据
+    def reset_game(self):
+        self.snake = [(WIDTH//2, HEIGHT//2), 
+                     (WIDTH//2 - CELL_SIZE, HEIGHT//2), 
+                     (WIDTH//2 - 2*CELL_SIZE, HEIGHT//2)]
+        self.direction = (CELL_SIZE, 0)  # 初始向右
+        self.food = generate_food(self.snake)
+        self.score = 0
+        self.game_over = False
+        self.speed = SPEED
+
+    # 键盘控制方向
+    def handle_input(self, event):
+        if event.type == pygame.KEYDOWN:
+            if not self.game_over:
+                # 禁止180度掉头
+                if event.key == pygame.K_UP and self.direction != (0, CELL_SIZE):
+                    self.direction = (0, -CELL_SIZE)
+                elif event.key == pygame.K_DOWN and self.direction != (0, -CELL_SIZE):
+                    self.direction = (0, CELL_SIZE)
+                elif event.key == pygame.K_LEFT and self.direction != (CELL_SIZE, 0):
+                    self.direction = (-CELL_SIZE, 0)
+                elif event.key == pygame.K_RIGHT and self.direction != (-CELL_SIZE, 0):
+                    self.direction = (CELL_SIZE, 0)
+            else:
+                # 游戏结束后按回车重新开始
+                if event.key == pygame.K_RETURN:
+                    self.reset_game()
+
+    # 更新游戏逻辑
+    def update(self):
+        if self.game_over:
+            return
+
+        # 移动蛇头
+        head_x, head_y = self.snake[0]
+        new_head = (head_x + self.direction[0], head_y + self.direction[1])
+
+        # 碰撞检测：撞墙 / 撞自身
+        if (new_head[0] < 0 or new_head[0] >= WIDTH or
+            new_head[1] < 0 or new_head[1] >= HEIGHT or
+            new_head in self.snake):
+            self.game_over = True
+            return
+
+        # 吃到食物
+        self.snake.insert(0, new_head)
+        if new_head == self.food:
+            self.score += 10
+            self.speed += 0.3  # 难度递增
+            self.food = generate_food(self.snake)
+        else:
+            self.snake.pop()  # 没吃到就删除尾部
+
+    # 绘制游戏画面
+    def draw(self):
+        screen.fill(BG_COLOR)
+
+        # 绘制游戏边框
+        draw_rounded_rect(screen, BORDER_COLOR, (10, 10, WIDTH-20, HEIGHT-20), 15)
+        draw_rounded_rect(screen, BG_COLOR, (20, 20, WIDTH-40, HEIGHT-40), 10)
+
+        # 绘制食物（圆形，更精美）
+        pygame.draw.circle(screen, FOOD_COLOR, 
+                          (self.food[0] + CELL_SIZE//2, self.food[1] + CELL_SIZE//2), 
+                          CELL_SIZE//2 - 2)
+
+        # 绘制蛇身
+        for i, (x, y) in enumerate(self.snake):
+            color = SNAKE_HEAD_COLOR if i == 0 else SNAKE_COLOR
+            draw_rounded_rect(screen, color, (x, y, CELL_SIZE, CELL_SIZE), 5)
+
+        # 绘制分数
+        draw_text(f"分数: {self.score}", font_small, TEXT_COLOR, 100, 35)
+
+        # 游戏结束界面
+        if self.game_over:
+            # 半透明遮罩
+            overlay = pygame.Surface((WIDTH, HEIGHT))
+            overlay.set_alpha(180)
+            overlay.fill((0,0,0))
+            screen.blit(overlay, (0,0))
+
+            draw_text("游戏结束！", font_large, (255,50,50), WIDTH//2, HEIGHT//2 - 60)
+            draw_text(f"最终得分: {self.score}", font_medium, TEXT_COLOR, WIDTH//2, HEIGHT//2)
+            draw_text("按 ENTER 重新开始", font_small, (200,200,200), WIDTH//2, HEIGHT//2 + 50)
+
+    # 运行游戏主循环
+    def run(self):
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                self.handle_input(event)
+
+            self.update()
+            self.draw()
+            
+            pygame.display.update()
+            clock.tick(self.speed)
+
+# -------------------------- 启动游戏 --------------------------
+if __name__ == "__main__":
+    game = SnakeGame()
+    game.run()
