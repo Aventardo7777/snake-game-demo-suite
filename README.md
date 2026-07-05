@@ -6,6 +6,10 @@
 <img src="https://img.shields.io/badge/Game-Type-Snake%20Game-purple" alt="Game Type">
 </div>
 
+## 🌐 在线网页版一键游玩地址（点击直达）
+<a href="https://Aventardo7777.github.io/snake-game-demo-suite/" target="_blank">https://Aventardo7777.github.io/snake-game-demo-suite/</a>
+> 点击上方链接，自动跳转至HTML Canvas贪吃蛇网页，无需本地环境，浏览器直接运行游玩
+> 
 ## 📖 Project Introduction
 This repository contains two complete independent versions of classic Snake game, covering desktop local game and web online playable version:
 1. **Python Pygame Desktop Version**: Object-oriented architecture, exquisite rounded UI, dark high-end color matching, progressive difficulty, collision detection & game restart mechanism;
